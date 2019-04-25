@@ -25,220 +25,208 @@
 
 namespace QSubber
 {
-    MainWindow::MainWindow(QWidget *parent)
-        : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent)
+  : QMainWindow(parent)
+{
+  QSubber::Application* app = static_cast<QSubber::Application*>(qApp);
+
+  ui.setupUi(this);
+
+  QString current_lang = app->settings->getConfig("current_lang", "eng");
+
+  QObject::connect(app, &Application::sublist_updated, this, &MainWindow::sublist_updated);
+
+  /* command line arguments */
+  QStringList pargs = app->positionalArgs();
+  if (pargs.count() > 0)
+    ui.mediaEdit->setText(pargs.at(0));
+
+  /* fill language combobox */
+  QMap<QString, QString> langs = app->settings->getLangCodes();
+
+  QMapIterator<QString, QString> i(langs);
+  while (i.hasNext())
+  { i.next();
+    ui.langCombo->addItem(i.value(), i.key());
+  }
+
+  // set default value
+  int langdefault = ui.langCombo->findData(current_lang);
+  ui.langCombo->setCurrentIndex(langdefault);
+}
+
+/* Slots */
+// conn
+void MainWindow::updateStatus(QString status, int timeout)
+{
+  statusBar()->showMessage(status, timeout);
+}
+
+void MainWindow::sublist_updated()
+{
+  SubtitleModel* model;
+
+  model = static_cast<SubtitleModel*>(ui.subtitlesView->model());
+
+  if (model) delete model;
+
+  QVariantList data = static_cast<Application*>(qApp)->getSubList();
+
+  model = new SubtitleModel(data);
+
+  ui.subtitlesView->setModel(model);
+
+  ui.subtitlesView->header()->setStretchLastSection(false);
+  ui.subtitlesView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+  ui.subtitlesView->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+}
+
+// UI slots
+void MainWindow::on_langCombo_currentIndexChanged(int index)
+{
+  Application* app = static_cast<Application*>(qApp);
+
+  app->settings->setConfig("current_lang", ui.langCombo->itemData(index).toString());
+}
+
+void MainWindow::on_mediaEdit_textChanged(QString text)
+{
+  QFileInfo info(text);
+  QString base = info.completeBaseName();
+
+  QVector<QRegExp> exps;
+
+  exps.append(QRegExp("([a-zA-Z0-9. ]+)[ -_.]+[Ss]([0-9]{0,2})[Ee]([0-9]{0,2})"));
+  exps.append(QRegExp("([a-zA-Z0-9. ]+)[ -_.]+([0-9]+)[Xx]([0-9]+)"));
+  exps.append(QRegExp("([a-zA-Z0-9. ]+)[ -_.]+([0-9]{1,2})([0-9]{2})"));
+
+  QVectorIterator<QRegExp> it(exps);
+  while (it.hasNext())
+  {
+    QRegExp exp = it.next();
+
+    if (exp.indexIn(base) != -1)
     {
-        QSubber::Application* app = static_cast<QSubber::Application*>(qApp);
+      QStringList texts = exp.capturedTexts();
+      QString name = texts.at(1);
+      name.replace(".", " ");
 
-        ui.setupUi(this);
+      ui.nameEdit->setText(name);
+      ui.seasonEdit->setText(texts.at(2));
+      ui.episodeEdit->setText(texts.at(3));
 
-        QString current_lang = app->settings->getConfig("current_lang", "eng");
+      break;
+    }
+  }
+}
 
-        QObject::connect(app, &Application::sublist_updated, this, &MainWindow::sublist_updated);
+void MainWindow::on_subtitlesView_doubleClicked()
+{
+  on_downloadButton_clicked();
+}
 
-        /* command line arguments */
-        QStringList pargs = app->positionalArgs();
-        if (pargs.count() > 0)
-            ui.mediaEdit->setText(pargs.at(0));
+void MainWindow::on_browseButton_clicked()
+{
+  QString dir = QDir::homePath();
 
-        /* fill language combobox */
-        QMap<QString, QString> langs = app->settings->getLangCodes();
+  if (!ui.mediaEdit->text().isEmpty()) {
+    dir = QDir(ui.mediaEdit->text()).path();
+  }
 
-        QMapIterator<QString, QString> i(langs);
-        while (i.hasNext())
-        { i.next();
-            ui.langCombo->addItem(i.value(), i.key());
-        }
+  QString filename = QFileDialog::getOpenFileName(this,
+                                                  "Open Media",
+                                                  dir,
+                                                  "Media Files (*.mp4 *.avi *.mkv *.flv *.3gp *.wmv)");
 
-        // set default value
-        int langdefault = ui.langCombo->findData(current_lang);
-        ui.langCombo->setCurrentIndex(langdefault);
+  ui.mediaEdit->setText(filename);
+}
+
+void MainWindow::on_downloadButton_clicked()
+{
+  static SubDownloader downh(this);
+
+  QModelIndex index = ui.subtitlesView->currentIndex();
+
+  if (index.isValid())
+  {
+    SubtitleModel* model = static_cast<SubtitleModel*>(ui.subtitlesView->model());
+
+    SubData* subdata = model->getSubData(index);
+
+    QString filename = subdata->getFilename();
+    QString suburl = subdata->getURL();
+    suburl.chop(3); // we don't want the gzipped one...
+
+    qDebug() << filename << ":" << suburl;
+
+    QStringList destfile;
+    QString media = ui.mediaEdit->text();
+    if(media.isEmpty()) {
+      destfile << QDir::currentPath();
+      destfile << "/" << filename;
+    } else {
+      QFileInfo info(media);
+
+      destfile << info.path();
+      destfile << "/" << info.completeBaseName() << "." << filename.right(3);
     }
 
-    /* Slots */
-    // conn
-    void MainWindow::updateStatus(QString status, int timeout)
-    {
-         statusBar()->showMessage(status, timeout);
-    }
+    downh.Download(QUrl(suburl), destfile.join(""), subdata->getByteSize());
+  }
+}
 
-    void MainWindow::sublist_updated()
-    {
-        SubtitleModel* model;
+void MainWindow::on_btnHash_clicked()
+{
+  Application* app = static_cast<Application*>(qApp);
 
-        model = static_cast<SubtitleModel*>(ui.subtitlesView->model());
+  QString media = ui.mediaEdit->text();
 
-        if (model) delete model;
+  QVariantMap params;
+  params["moviehash"] = calculate_hash_for_file(media.toUtf8().data());
 
-        QVariantList data = static_cast<Application*>(qApp)->getSubList();
+  app->osh.Search(params);
+}
 
-        model = new SubtitleModel(data);
+void MainWindow::on_btnHashSize_clicked()
+{
+  Application* app = static_cast<Application*>(qApp);
 
-        ui.subtitlesView->setModel(model);
+  QString media = ui.mediaEdit->text();
 
-        ui.subtitlesView->header()->setStretchLastSection(false);
-        ui.subtitlesView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-        ui.subtitlesView->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    }
+  QVariantMap params;
+  params["moviehash"]     = calculate_hash_for_file(media.toUtf8().data());
+  params["moviebytesize"] = QFileInfo(media).size();
 
-    // UI slots
-    void MainWindow::on_langCombo_currentIndexChanged(int index)
-    {
-        Application* app = static_cast<Application*>(qApp);
+  app->osh.Search(params);
+}
 
-        app->settings->setConfig("current_lang", ui.langCombo->itemData(index).toString());
-    }
+void MainWindow::on_btnQuery_clicked()
+{
+  Application* app = static_cast<Application*>(qApp);
 
-    void MainWindow::on_mediaEdit_textChanged(QString text)
-    {
-        QFileInfo info(text);
-        QString base = info.completeBaseName();
+  QVariantMap params;
+  params["query"]   = ui.nameEdit->text();
+  params["season"]  = ui.seasonEdit->text();
+  params["episode"] = ui.episodeEdit->text();
 
-        QVector<QRegExp> exps;
+  app->osh.Search(params);
+}
 
-        exps.append(QRegExp("([a-zA-Z0-9. ]+)[ -_.]+[Ss]([0-9]{0,2})[Ee]([0-9]{0,2})"));
-        exps.append(QRegExp("([a-zA-Z0-9. ]+)[ -_.]+([0-9]+)[Xx]([0-9]+)"));
-        exps.append(QRegExp("([a-zA-Z0-9. ]+)[ -_.]+([0-9]{1,2})([0-9]{2})"));
+void MainWindow::on_action_Preferences_triggered()
+{
+  SettingsDialog* dialog = new SettingsDialog();
+  dialog->exec();
 
-        QVectorIterator<QRegExp> it(exps);
-        while (it.hasNext())
-        {
-            QRegExp exp = it.next();
+  delete dialog;
+}
 
-            if (exp.indexIn(base) != -1)
-            {
-                QStringList texts = exp.capturedTexts();
-                QString name = texts.at(1);
-                name.replace(".", " ");
+void MainWindow::on_action_Quit_triggered()
+{
+  qApp->quit();
+}
 
-                ui.nameEdit->setText(name);
-                ui.seasonEdit->setText(texts.at(2));
-                ui.episodeEdit->setText(texts.at(3));
+void MainWindow::on_action_About_triggered()
+{
 
-                break;
-            }
-        }
-    }
-
-    void MainWindow::on_subtitlesView_doubleClicked()
-    {
-        on_downloadButton_clicked();
-    }
-
-    void MainWindow::on_browseButton_clicked()
-    {
-        QString dir = QDir::homePath();
-
-        if (!ui.mediaEdit->text().isEmpty()) {
-            dir = QDir(ui.mediaEdit->text()).path();
-        }
-
-        QString filename = QFileDialog::getOpenFileName(this,
-                                                        "Open Media",
-                                                        dir,
-                                                        "Media Files (*.mp4 *.avi *.mkv *.flv *.3gp *.wmv)");
-
-        ui.mediaEdit->setText(filename);
-    }
-
-    void MainWindow::on_downloadButton_clicked()
-    {
-        static SubDownloader downh(this);
-
-        QModelIndex index = ui.subtitlesView->currentIndex();
-
-        if (index.isValid())
-        {
-            SubtitleModel* model = static_cast<SubtitleModel*>(ui.subtitlesView->model());
-
-            SubData* subdata = model->getSubData(index);
-
-            QString filename = subdata->getFilename();
-            QString suburl = subdata->getURL();
-            suburl.chop(3); // we don't want the gzipped one...
-
-            qDebug() << filename << ":" << suburl;
-
-            QStringList destfile;
-            QString media = ui.mediaEdit->text();
-            if(media.isEmpty()) {
-                destfile << QDir::currentPath();
-                destfile << "/" << filename;
-            } else {
-                QFileInfo info(media);
-
-                destfile << info.path();
-                destfile << "/" << info.completeBaseName() << "." << filename.right(3);
-            }
-
-            downh.Download(QUrl(suburl), destfile.join(""), subdata->getByteSize());
-        }
-    }
-
-    void MainWindow::on_aSearchButton_clicked()
-    {
-        Application* app = static_cast<Application*>(qApp);
-
-        QString media = ui.mediaEdit->text();
-
-        QVariantMap params;
-        params["moviehash"]     = calculate_hash_for_file(media.toUtf8().data());
-        params["moviebytesize"] = (double) QFileInfo(media).size();
-
-        app->osh.Search(params);
-    }
-
-    void MainWindow::on_hSearchButton_clicked()
-    {
-        Application* app = static_cast<Application*>(qApp);
-
-        QString media = ui.mediaEdit->text();
-
-        QVariantMap params;
-        params["moviehash"] = calculate_hash_for_file(media.toUtf8().data());
-
-        app->osh.Search(params);
-    }
-
-    void MainWindow::on_nSearchButton_clicked()
-    {
-        Application* app = static_cast<Application*>(qApp);
-
-        QVariantMap params;
-        params["query"]   = ui.nameEdit->text();
-        params["season"]  = ui.seasonEdit->text();
-        params["episode"] = ui.episodeEdit->text();
-
-        app->osh.Search(params);
-    }
-
-    void MainWindow::on_sSearchButton_clicked()
-    {
-        Application* app = static_cast<Application*>(qApp);
-
-        QString media = ui.mediaEdit->text();
-
-        QVariantMap params;
-        params["moviebytesize"] = (double) QFileInfo(media).size();
-
-        app->osh.Search(params);
-    }
-
-    void MainWindow::on_action_Preferences_triggered()
-    {
-        SettingsDialog* dialog = new SettingsDialog();
-        dialog->exec();
-
-        delete dialog;
-    }
-
-    void MainWindow::on_action_Quit_triggered()
-    {
-        qApp->quit();
-    }
-
-    void MainWindow::on_action_About_triggered()
-    {
-
-    }
+}
 }

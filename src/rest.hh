@@ -15,16 +15,34 @@
  * along with QSubber.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#include "httptransport.hh"
 
-#define APP_CONFIG_DIR "qsubber"
-#define APP_CONFIG_FILENAME "qsubber.db"
-#define QSUBBER_VERSION "1.0a"
+#include <QObject>
 
-/* Network related build time configurations */
-#define USER_AGENT "QSubber v1"
-#define REST_URL   "https://rest.opensubtitles.org/"
+namespace QSubber
+{
+class Rest : public QObject
+{
+  Q_OBJECT
 
-#endif // CONFIG_H
+public:
+  Rest(QString url, QString ua);
+
+  void search(QVariantMap params);
+
+protected:
+  void handleSearch(QByteArray data);
+
+private:
+  HttpTransport m_transport;
+  QString m_url;
+
+signals:
+  void doneSearch(QVariantList subs);
+
+private slots:
+    void proccessReply(QUrl url, QByteArray data);
+};
+}

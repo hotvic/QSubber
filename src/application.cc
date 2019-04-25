@@ -40,7 +40,9 @@ namespace QSubber
         window->show();
 
         osh.fetchSubLanguages();
-        osh.LogIn(settings->getConfig("auth_user"), settings->getConfig("auth_pass"));
+        // TODO: verify if we are going to login
+        // Since the REST API is public we will login only if explicit required by the user.
+        // osh.LogIn(settings->getConfig("auth_user"), settings->getConfig("auth_pass"));
     }
 
     QStringList Application::positionalArgs()

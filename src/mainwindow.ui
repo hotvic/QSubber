@@ -89,30 +89,23 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="hSearchButton">
+       <widget class="QPushButton" name="btnHash">
         <property name="text">
          <string>By Hash</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="sSearchButton">
+       <widget class="QPushButton" name="btnHashSize">
         <property name="text">
-         <string>By Size</string>
+         <string>By Hash &amp;&amp; &amp;Size</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="nSearchButton">
+       <widget class="QPushButton" name="btnQuery">
         <property name="text">
-         <string>By Name</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="aSearchButton">
-        <property name="text">
-         <string>By &amp;All</string>
+         <string>By Query</string>
         </property>
        </widget>
       </item>
@@ -126,7 +119,7 @@
      <x>0</x>
      <y>0</y>
      <width>560</width>
-     <height>23</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -172,10 +165,8 @@
   <tabstop>langCombo</tabstop>
   <tabstop>subtitlesView</tabstop>
   <tabstop>downloadButton</tabstop>
-  <tabstop>hSearchButton</tabstop>
-  <tabstop>sSearchButton</tabstop>
-  <tabstop>nSearchButton</tabstop>
-  <tabstop>aSearchButton</tabstop>
+  <tabstop>btnHash</tabstop>
+  <tabstop>btnQuery</tabstop>
  </tabstops>
  <resources/>
  <connections/>

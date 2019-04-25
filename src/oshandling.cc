@@ -22,196 +22,173 @@
 
 namespace QSubber
 {
-    OSHandling::OSHandling(QObject *parent) : QObject(parent)
-        , rpc(RPC_URL, USER_AGENT)
-    {
-        connect(&rpc, &XmlRPC::readyReply, this, &OSHandling::finishedCall);
-    }
+OSHandling::OSHandling(QObject *parent) : QObject(parent)
+, rest(REST_URL, USER_AGENT)
+{
+  connect(&rest, &Rest::doneSearch, this, &OSHandling::doneSearching);
+}
 
-    bool OSHandling::isLoggedIn()
-    {
-        if (token.isEmpty()) return false;
+bool OSHandling::isLoggedIn()
+{
+  if (token.isEmpty()) return false;
 
-        return true;
-    }
+  return true;
+}
 
-    void OSHandling::queueCall(QString name, QVariantList args)
-    {
-        typedef struct
-        {
-            QString name;
-            QVariantList args;
-            bool working;
-        } MethodCall;
+void OSHandling::queueCall(QString name, QVariantList args)
+{
+  // TODO: Fix this or delete if uneeded any more.
+//  typedef struct
+//  {
+//    QString name;
+//    QVariantList args;
+//    bool working;
+//  } MethodCall;
 
-        static QQueue<MethodCall> queue;
+//  static QQueue<MethodCall> queue;
 
-        if (!name.isNull())
-        {
-            MethodCall call { name, args, false };
-            queue.enqueue(call);
+//  if (!name.isNull())
+//  {
+//    MethodCall call { name, args, false };
+//    queue.enqueue(call);
 
-            if (queue.size() == 1) queueCall();
-        }
-        else {
-            if (queue.isEmpty()) return;
+//    if (queue.size() == 1) queueCall();
+//  }
+//  else {
+//    if (queue.isEmpty()) return;
 
-            MethodCall* call = &queue.head();
+//    MethodCall* call = &queue.head();
 
-            if (call->working)
-            {
-                queue.dequeue();
-                queueCall();
-            }
-            else {
-                call->working = true;
+//    if (call->working)
+//    {
+//      queue.dequeue();
+//      queueCall();
+//    }
+//    else {
+//      call->working = true;
 
-                rpc.Call(call->name, call->args);
+//      rpc.Call(call->name, call->args);
 
-                static_cast<Application*>(qApp)->setCurrentJob(call->name);
-            }
-        }
-    }
+//      static_cast<Application*>(qApp)->setCurrentJob(call->name);
+//    }
+//  }
+}
 
-    void OSHandling::Search(QVariantMap& params)
-    {
-        Application* app = static_cast<Application*>(qApp);
+void OSHandling::Search(QVariantMap& params)
+{
+  Application* app = dynamic_cast<Application*>(qApp);
 
-        app->updateStatus("Searching...");
+  app->updateStatus("Searching...");
 
-        QVariantMap searchData;
-        searchData["sublanguageid"] = app->settings->getConfig("current_lang", "eng");
-        searchData["moviehash"]     = "";
-        searchData["moviebytesize"] = "";
-        searchData["imdbid"]        = "";
-        searchData["query"]         = "";
-        searchData["season"]        = "";
-        searchData["episode"]       = "";
-        searchData["tag"]           = "";
+  // dynamic_cast<Application*>(qApp)->setCurrentJob("Search");
 
-        QMapIterator<QString, QVariant> param(params);
-        while (param.hasNext())
-        {
-            param.next();
+  rest.search(params);
+}
 
-            searchData[param.key()] = param.value();
-        }
+void OSHandling::fetchSubLanguages(QString locale)
+{
+  Application* app = static_cast<Application*>(qApp);
 
-        QVariantList searches;
-        searches.append(searchData);
+  if (locale.isEmpty()) locale = app->settings->getConfig("current_locale", "en");
 
-        QVariantList searchParms;
-        searchParms.append(token);
-        searchParms.insert(searchParms.size(), searches);
+  if (!app->settings->hasLocale(locale))
+  {
+    QVariantList paramList;
 
-        queueCall("SearchSubtitles", searchParms);
-    }
+    paramList.append(locale);
 
-    void OSHandling::fetchSubLanguages(QString locale)
-    {
-        Application* app = static_cast<Application*>(qApp);
+    queueCall("GetSubLanguages", paramList);
+  }
+}
 
-        if (locale.isEmpty()) locale = app->settings->getConfig("current_locale", "en");
+void OSHandling::LogIn(QString username, QString password)
+{
+  Application* app = static_cast<Application*>(qApp);
 
-        if (!app->settings->hasLocale(locale))
-        {
-            QVariantList paramList;
+  app->updateStatus("Logging in...");
 
-            paramList.append(locale);
+  QVariantList args;
 
-            queueCall("GetSubLanguages", paramList);
-        }
-    }
+  args << username;
+  args << password;
+  args << QString("eng");
+  args << QString(USER_AGENT);
 
-    void OSHandling::LogIn(QString username, QString password)
-    {
-        Application* app = static_cast<Application*>(qApp);
+  queueCall("LogIn", args);
+}
 
-        app->updateStatus("Logging in...");
+void OSHandling::postLogIn()
+{
+//  Application* app = static_cast<Application*>(qApp);
 
-        QVariantList args;
+//  if (reply.get("params.0.status") == "200 OK")
+//  {
+//    qDebug() << "Logged in, token:" << reply.get("params.0.token").toString();
 
-        args << username;
-        args << password;
-        args << QString("eng");
-        args << QString(USER_AGENT);
+//    token = reply.get("params.0.token").toString();
 
-        queueCall("LogIn", args);
-    }
+//    app->updateStatus("Logged in!!!", 3000);
+//  }
+//  else {
+//    QString status("Failed to login, server error: %0");
 
-    void OSHandling::postLogIn(XmlReply& reply)
-    {
-        Application* app = static_cast<Application*>(qApp);
+//    app->updateStatus(status.arg(reply.get("params.0.status").toString()));
+//  }
+}
 
-        if (reply.get("params.0.status") == "200 OK")
-        {
-            qDebug() << "Logged in, token:" << reply.get("params.0.token").toString();
+void OSHandling::postSearch()
+{
+//  Application* app = static_cast<Application*>(qApp);
 
-            token = reply.get("params.0.token").toString();
+//  if (reply.get("params.0.status") == "200 OK")
+//  {
+//    QVariantList data = reply.get("params.0.data").toList();
 
-            app->updateStatus("Logged in!!!", 3000);
-        }
-        else {
-            QString status("Failed to login, server error: %0");
+//    if (data.isEmpty())
+//    {
+//      app->setSubList(QVariantList());
+//      app->updateStatus("Searching... done. No Results!", 1500);
+//      return;
+//    }
 
-            app->updateStatus(status.arg(reply.get("params.0.status").toString()));
-        }
-    }
+//    app->setSubList(data);
+//  }
 
-    void OSHandling::postSearch(XmlReply& reply)
-    {
-        Application* app = static_cast<Application*>(qApp);
+//  app->updateStatus("Searching... done!", 1500);
+}
 
-        if (reply.get("params.0.status") == "200 OK")
-        {
-            QVariantList data = reply.get("params.0.data").toList();
+void OSHandling::postSubLanguages()
+{
+//  Application* app = static_cast<Application*>(qApp);
 
-            if (data.isEmpty())
-            {
-                app->setSubList(QVariantList());
-                app->updateStatus("Searching... done. No Results!", 1500);
-                return;
-            }
+//  QVariantList data = reply.get("params.0.data").toList();
 
-            app->setSubList(data);
-        }
+//  for (int i = 0; i < data.size(); ++i)
+//  {
+//    QVariantMap lang = data.at(i).toMap();
+//    QString locale = app->settings->getConfig("current_locale", "en");
 
-        app->updateStatus("Searching... done!", 1500);
-    }
+//    app->settings->setLangCode(locale,
+//                               lang["SubLanguageID"].toString(),
+//        lang["LanguageName"].toString());
+//  }
+}
 
-    void OSHandling::postSubLanguages(XmlReply& reply)
-    {
-        Application* app = static_cast<Application*>(qApp);
+void OSHandling::doneSearching(QVariantList subs)
+{
+  qDebug() << subs;
 
-        QVariantList data = reply.get("params.0.data").toList();
+  Application* app = static_cast<Application*>(qApp);
 
-        for (int i = 0; i < data.size(); ++i)
-        {
-            QVariantMap lang = data.at(i).toMap();
-            QString locale = app->settings->getConfig("current_locale", "en");
+  if (subs.isEmpty())
+  {
+    app->setSubList(QVariantList());
+    app->updateStatus("Searching... done. No Results!", 1500);
+    return;
+  }
 
-            app->settings->setLangCode(locale,
-                                       lang["SubLanguageID"].toString(),
-                                       lang["LanguageName"].toString());
-        }
-    }
+  app->setSubList(subs);
 
-    void OSHandling::finishedCall(XmlReply reply)
-    {
-        QString job = static_cast<Application*>(qApp)->popCurrentJob();
-        queueCall();
-
-        if (job == "LogIn")
-        {
-            postLogIn(reply);
-        }
-        else if (job == "SearchSubtitles")
-        {
-            postSearch(reply);
-        }
-        else if (job == "GetSubLanguages")
-        {
-            postSubLanguages(reply);
-        }
-    }
+  app->updateStatus("Searching... done!", 1500);
+}
 }

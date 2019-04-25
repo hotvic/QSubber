@@ -16,8 +16,10 @@
  */
 
 #include "config.h"
+
 #include "subdata.hh"
-#include "xmlrpc.hh"
+#include "httptransport.hh"
+#include "rest.hh"
 
 #include <QtCore>
 
@@ -32,23 +34,23 @@ namespace QSubber
     {
         Q_OBJECT
 
-        XmlRPC rpc;
+        Rest rest;
         QString token;
 
         void queueCall(QString name=QString(), QVariantList args=QVariantList());
-        void postLogIn(XmlReply& reply);
-        void postSearch(XmlReply& reply);
-        void postSubLanguages(XmlReply& reply);
+        void postLogIn();
+        void postSearch();
+        void postSubLanguages();
 
     public:
-        OSHandling(QObject* parent=0);
+        OSHandling(QObject* parent=nullptr);
         bool isLoggedIn();
         void LogIn(QString username, QString password);
         void fetchSubLanguages(QString locale = QString());
         void Search(QVariantMap& params);
 
     private slots:
-        void finishedCall(XmlReply reply);
+        void doneSearching(QVariantList subs);
     };
 }
 
