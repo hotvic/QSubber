@@ -82,6 +82,8 @@ void OSHandling::Search(QVariantMap& params)
 
   // dynamic_cast<Application*>(qApp)->setCurrentJob("Search");
 
+  params["sublanguageid"] = app->settings->getConfig("current_lang", "all");
+
   rest.search(params);
 }
 

@@ -29,7 +29,7 @@ void Rest::search(QVariantMap params)
       comp.push_back(QString::number(it.value().toLongLong()));
     }
     else if (comp == "moviehash-" || comp == "query-" || comp == "sublanguageid-" || comp == "episode-"
-             || comp == "season-")
+             || comp == "season-" || comp == "sublanguageid-")
     {
       comp.push_back(QUrl::toPercentEncoding(it.value().toString()));
     }
