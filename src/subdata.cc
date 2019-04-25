@@ -19,46 +19,49 @@
 
 namespace QSubber
 {
-    SubData::SubData(QVariantMap data)
-    {
-        QString d_id       = data.value("IDSubtitle").toString();
-        QString d_size     = data.value("SubSize").toString();
-        QString d_url      = data.value("SubDownloadLink").toString();
-        QString d_filename = data.value("SubFileName").toString();
+SubData::SubData(QVariantMap data)
+{
+  QString d_id       = data.value("IDSubtitle").toString();
+  QString d_size     = data.value("SubSize").toString();
+  QString d_url      = data.value("SubDownloadLink").toString();
+  QString d_filename = data.value("SubFileName").toString();
 
-        id       = d_id.toLongLong();
-        size     = d_size;
-        url      = d_url;
-        filename = d_filename;
-    }
+  id       = d_id.toLongLong();
+  size     = d_size;
+  url      = d_url;
+  filename = d_filename;
+  this->m_lang = data.value("SubLanguageID").toString();
+}
 
-    qint64 SubData::getID()
-    {
-        return id;
-    }
+qint64 SubData::getID()
+{
+  return id;
+}
 
-    qint64 SubData::getByteSize()
-    {
-        return size.toLongLong();
-    }
+qint64 SubData::getByteSize()
+{
+  return size.toLongLong();
+}
 
-    QString SubData::getSize()
-    {
-        qint64 ll_size = size.toLongLong();
+QString SubData::getSize()
+{
+  qint64 ll_size = size.toLongLong();
 
-        if (ll_size > 1024 && ll_size < (1024 * 1024))
-            return QString("%0 kB").arg(ll_size / 1024);
+  if (ll_size > 1024 && ll_size < (1024 * 1024))
+    return QString("%0 kB").arg(ll_size / 1024);
 
-        return size;
-    }
+  return size;
+}
 
-    QString SubData::getURL()
-    {
-        return url;
-    }
+QString SubData::getURL()
+{
+  return url;
+}
 
-    QString SubData::getFilename()
-    {
-        return filename;
-    }
+QString SubData::getFilename()
+{
+  return filename;
+}
+
+QString SubData::lang() { return this->m_lang; }
 }

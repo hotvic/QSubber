@@ -19,80 +19,84 @@
 
 namespace QSubber
 {
-    SubtitleModel::SubtitleModel(QVariantList subtitles)
-        : QAbstractListModel()
+SubtitleModel::SubtitleModel(QVariantList subtitles)
+  : QAbstractListModel()
+{
+  for (int i = 0; i < subtitles.size(); ++i)
+  {
+    SubData* subdata = new SubData(subtitles.at(i).toMap());
+
+    subs.append(subdata);
+  }
+}
+
+SubtitleModel::~SubtitleModel()
+{
+  qDeleteAll(subs);
+}
+
+int SubtitleModel::rowCount(const QModelIndex& parent) const
+{
+  if (parent.isValid()) return 0;
+
+  return subs.size();
+}
+
+int SubtitleModel::columnCount(const QModelIndex& parent) const
+{
+  if (parent.isValid()) return 0;
+
+  return 3;
+}
+
+Qt::ItemFlags SubtitleModel::flags(const QModelIndex& index) const
+{
+  if (index.isValid()) return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+
+  return Qt::ItemIsEnabled;
+}
+
+QVariant SubtitleModel::data(const QModelIndex& index, int role) const
+{
+  if (role != Qt::DisplayRole) return QVariant();
+
+  if (subs.size() > index.row() && index.column() < 3)
+  {
+    if (index.column() == 0)
+      return subs.at(index.row())->getFilename();
+    else if (index.column() == 1)
+      return subs.at(index.row())->getSize();
+    else if (index.column() == 2)
+      return subs.at(index.row())->lang();
+  }
+
+  return QVariant();
+}
+
+QVariant SubtitleModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+  if (orientation != Qt::Horizontal) return QVariant();
+
+  if (role == Qt::DisplayRole)
+  {
+    switch (section)
     {
-        for (int i = 0; i < subtitles.size(); ++i)
-        {
-            SubData* subdata = new SubData(subtitles.at(i).toMap());
-
-            subs.append(subdata);
-        }
+    case 0:
+      return tr("Name");
+    case 1:
+      return tr("Size");
+    case 2:
+      return tr("Language");
+    default:
+      return QVariant();
     }
+  }
 
-    SubtitleModel::~SubtitleModel()
-    {
-        qDeleteAll(subs);
-    }
+  return QVariant();
+}
 
-    int SubtitleModel::rowCount(const QModelIndex& parent) const
-    {
-        if (parent.isValid()) return 0;
-
-        return subs.size();
-    }
-
-    int SubtitleModel::columnCount(const QModelIndex& parent) const
-    {
-        if (parent.isValid()) return 0;
-
-        return 2;
-    }
-
-    Qt::ItemFlags SubtitleModel::flags(const QModelIndex& index) const
-    {
-        if (index.isValid()) return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
-
-        return Qt::ItemIsEnabled;
-    }
-
-    QVariant SubtitleModel::data(const QModelIndex& index, int role) const
-    {
-        if (role != Qt::DisplayRole) return QVariant();
-
-        if (subs.size() > index.row() && index.column() < 2)
-        {
-            if (index.column() == 0)
-                return subs.at(index.row())->getFilename();
-            else if (index.column() == 1)
-                return subs.at(index.row())->getSize();
-        }
-
-        return QVariant();
-    }
-
-    QVariant SubtitleModel::headerData(int section, Qt::Orientation orientation, int role) const
-    {
-        if (orientation != Qt::Horizontal) return QVariant();
-
-        if (role == Qt::DisplayRole)
-        {
-            if (section == 0)
-            {
-                return tr("Name");
-            }
-
-            if (section == 1)
-            {
-                return tr("Size");
-            }
-        }
-
-        return QVariant();
-    }
-
-    SubData* SubtitleModel::getSubData(const QModelIndex& index) const
-    {
-        return subs.at(index.row());
-    }
+SubData* SubtitleModel::getSubData(const QModelIndex& index) const
+{
+  return subs.at(index.row());
+}
 }

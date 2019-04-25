@@ -22,23 +22,27 @@
 
 namespace QSubber
 {
-    class SubData {
-    public:
-        SubData(QVariantMap data);
+class SubData {
+public:
+  SubData(QVariantMap data);
 
-        /* Getters / Setters */
-        qint64 getID();
-        qint64 getByteSize();
-        QString getSize();
-        QString getURL();
-        QString getFilename();
+  /* Getters / Setters */
+  qint64 getID();
+  qint64 getByteSize();
+  QString getSize();
+  QString getURL();
+  QString getFilename();
+  QString lang();
 
-    protected:
-        qint64 id;
-        QString size;
-        QString url;
-        QString filename;
-    };
+protected:
+  qint64 id;
+  QString size;
+  QString url;
+  QString filename;
+
+private:
+  QString m_lang;
+};
 }
 
 #endif // SUBDATA_H
