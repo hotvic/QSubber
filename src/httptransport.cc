@@ -54,13 +54,12 @@ void HttpTransport::post(QUrl url, QByteArray data)
   QNetworkRequest request;
   request.setUrl(url);
   request.setHeader(QNetworkRequest::UserAgentHeader, useragent);
-  request.setHeader(QNetworkRequest::ContentTypeHeader, "text/xml");
+  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
   auto reply = manager.post(request, data);
 
   connect(reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this,
           &HttpTransport::on_reply_error);
-  connect(reply, &QNetworkReply::readyRead, this, &HttpTransport::on_reply_readyRead);
   connect(reply, &QNetworkReply::downloadProgress, this, &HttpTransport::on_reply_downloadProgress);
 }
 

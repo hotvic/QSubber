@@ -30,28 +30,29 @@ using namespace std;
 
 namespace QSubber
 {
-    class OSHandling : public QObject
-    {
-        Q_OBJECT
+class OSHandling : public QObject
+{
+  Q_OBJECT
 
-        Rest rest;
-        QString token;
+public:
+  OSHandling(QObject* parent=nullptr);
 
-        void queueCall(QString name=QString(), QVariantList args=QVariantList());
-        void postLogIn();
-        void postSearch();
-        void postSubLanguages();
+  void login(QString username, QString password);
+  void fetchSubLanguages(QString locale = QString());
+  void Search(QVariantMap& params);
 
-    public:
-        OSHandling(QObject* parent=nullptr);
-        bool isLoggedIn();
-        void LogIn(QString username, QString password);
-        void fetchSubLanguages(QString locale = QString());
-        void Search(QVariantMap& params);
+private:
+  Rest m_rest;
 
-    private slots:
-        void doneSearching(QVariantList subs);
-    };
+  void postSubLanguages();
+
+signals:
+  void loginResult(bool successful, QString sid);
+
+private slots:
+  void doneSearching(QVariantList subs);
+  void doneLogin(QVariantMap data);
+};
 }
 
 #endif // OSHANDLING_H

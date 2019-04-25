@@ -26,23 +26,29 @@
 
 namespace QSubber
 {
-    class SettingsDialog : public QDialog
-    {
-        Q_OBJECT
+class SettingsDialog : public QDialog
+{
+  Q_OBJECT
 
-        QHash<QString, QString> values;
+  QHash<QString, QString> values;
 
-    public:
-        SettingsDialog();
+public:
+  SettingsDialog();
 
-    public slots:
-        void accepted();
-        void auth_user_changed();
-        void auth_pass_changed();
+public slots:
+  void accepted();
+  void auth_user_changed();
+  void auth_pass_changed();
+  void onLogin(bool successful, QString sid);
+  void on_btnLogin_clicked();
 
-    private:
-        Ui::SettingsDialog ui;
-    };
+private:
+  Ui::SettingsDialog ui;
+
+  bool m_logged;
+
+  void updateLoginButtonState();
+};
 }
 
 #endif // CONFIGDIALOG_H

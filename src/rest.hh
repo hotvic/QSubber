@@ -30,9 +30,11 @@ class Rest : public QObject
 public:
   Rest(QString url, QString ua);
 
+  void login(QString username, QString password);
   void search(QVariantMap params);
 
 protected:
+  void handleLogin(QByteArray data);
   void handleSearch(QByteArray data);
 
 private:
@@ -40,6 +42,7 @@ private:
   QString m_url;
 
 signals:
+  void doneLogin(QVariantMap data);
   void doneSearch(QVariantList subs);
 
 private slots:

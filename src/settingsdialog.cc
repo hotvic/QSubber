@@ -19,41 +19,80 @@
 
 namespace QSubber
 {
-    SettingsDialog::SettingsDialog()
-    {
-        Application* app = static_cast<Application*>(qApp);
+SettingsDialog::SettingsDialog()
+{
+  Application* app = static_cast<Application*>(qApp);
 
-        ui.setupUi(this);
+  this->ui.setupUi(this);
 
-        /* Load values */
-        ui.userEdit->setText(app->settings->getConfig("auth_user"));
-        ui.passEdit->setText(app->settings->getConfig("auth_pass"));
+  this->ui.lblLoginStatus->hide();
 
-        /* Signals / Slots */
-        connect(this, &QDialog::accepted, this, &SettingsDialog::accepted);
-        connect(ui.userEdit, &QLineEdit::textChanged, this, &SettingsDialog::auth_user_changed);
-        connect(ui.passEdit, &QLineEdit::textChanged, this, &SettingsDialog::auth_pass_changed);
-    }
+  /* Load values */
+  ui.userEdit->setText(app->settings->getConfig("auth_user"));
+  ui.passEdit->setText(app->settings->getConfig("auth_pass"));
 
-    void SettingsDialog::accepted()
-    {
-        Application* app = static_cast<Application*>(qApp);
+  this->auth_user_changed();
+  this->auth_pass_changed();
 
-        QHashIterator<QString, QString> i(values);
-        while (i.hasNext())
-        {
-            i.next();
-            app->settings->setConfig(i.key(), i.value());
-        }
-    }
+  this->updateLoginButtonState();
 
-    void SettingsDialog::auth_user_changed()
-    {
-        values["auth_user"] = ui.userEdit->text();
-    }
+  /* Signals / Slots */
+  connect(this, &QDialog::accepted, this, &SettingsDialog::accepted);
+  connect(&(app->osh), &OSHandling::loginResult, this, &SettingsDialog::onLogin);
+  connect(ui.userEdit, &QLineEdit::textChanged, this, &SettingsDialog::auth_user_changed);
+  connect(ui.passEdit, &QLineEdit::textChanged, this, &SettingsDialog::auth_pass_changed);
+}
 
-    void SettingsDialog::auth_pass_changed()
-    {
-        values["auth_pass"] = ui.passEdit->text();
-    }
+void SettingsDialog::accepted()
+{
+  Application* app = static_cast<Application*>(qApp);
+
+  QHashIterator<QString, QString> i(values);
+  while (i.hasNext())
+  {
+    i.next();
+    app->settings->setConfig(i.key(), i.value());
+  }
+}
+
+void SettingsDialog::auth_user_changed()
+{
+  values["auth_user"] = ui.userEdit->text();
+
+  this->updateLoginButtonState();
+}
+
+void SettingsDialog::auth_pass_changed()
+{
+  values["auth_pass"] = ui.passEdit->text();
+
+  this->updateLoginButtonState();
+}
+
+void SettingsDialog::onLogin(bool successful, QString sid)
+{
+  if (successful)
+  {
+    this->ui.lblLoginStatus->setText(tr("Login success! Session ID: ") + sid);
+  }
+  else
+  {
+    this->ui.lblLoginStatus->setText(tr("Login Failed..."));
+  }
+}
+
+void SettingsDialog::on_btnLogin_clicked()
+{
+  dynamic_cast<Application*>(qApp)->osh.login(values["auth_user"], values["auth_pass"]);
+
+  this->ui.lblLoginStatus->setText(tr("Logging in..."));
+  this->ui.lblLoginStatus->show();
+}
+
+void SettingsDialog::updateLoginButtonState()
+{
+  bool enabled = !(this->values["auth_user"].isEmpty() || this->values["auth_pass"].isEmpty());
+
+  this->ui.btnLogin->setEnabled(enabled);
+}
 }

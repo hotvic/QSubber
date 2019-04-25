@@ -10,6 +10,14 @@ Rest::Rest(QString url, QString ua)
   connect(&this->m_transport, &HttpTransport::replyFinished, this, &Rest::proccessReply);
 }
 
+void Rest::login(QString username, QString password)
+{
+  QUrl url(this->m_url + "auth");
+  QString data = "username=" + username + "&password=" + password;
+
+  this->m_transport.post(url, data.toUtf8());
+}
+
 void Rest::search(QVariantMap params)
 {
   if (params.empty()) {
@@ -50,6 +58,36 @@ void Rest::search(QVariantMap params)
   this->m_transport.get(url);
 }
 
+void Rest::handleLogin(QByteArray data)
+{
+  QJsonParseError err;
+
+  if (data.isEmpty())
+  {
+    qDebug() << "Empty response from server";
+    return;
+  }
+
+  auto doc = QJsonDocument::fromJson(data, &err);
+
+  if (doc.isNull())
+  {
+    qDebug() << "Json Parsing Error:" << err.errorString();
+    qDebug() << "Invalid Json:" << data;
+
+    return;
+  }
+
+  if (doc.isObject())
+  {
+    emit doneLogin(doc.object().toVariantMap());
+  }
+  else
+  {
+    qWarning() << "Unknown reply from server!";
+  }
+}
+
 void Rest::handleSearch(QByteArray data)
 {
   QJsonParseError err;
@@ -82,7 +120,11 @@ void Rest::proccessReply(QUrl url, QByteArray data)
 {
   qDebug() << "Got reply from:" << url.toString();
 
-  if (url.path().startsWith("/search"))
+  if (url.path().startsWith("/auth"))
+  {
+    this->handleLogin(data);
+  }
+  else if (url.path().startsWith("/search"))
   {
     this->handleSearch(data);
   }
