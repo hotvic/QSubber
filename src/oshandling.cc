@@ -92,11 +92,13 @@ void OSHandling::doneSearching(QVariantList subs)
 {
   qDebug() << subs;
 
+  dynamic_cast<Application*>(qApp)->popCurrentJob();
+
   Application* app = static_cast<Application*>(qApp);
 
   if (subs.isEmpty())
   {
-    app->setSubList(QVariantList());
+    app->setSubList(subs);
     app->updateStatus("Searching... done. No Results!", 1500);
     return;
   }

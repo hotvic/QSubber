@@ -94,6 +94,9 @@ void Rest::handleSearch(QByteArray data)
 
   if (data.isEmpty()) {
     qDebug() << "Empty response from server";
+
+    emit doneSearch(QVariantList());
+
     return;
   }
 
